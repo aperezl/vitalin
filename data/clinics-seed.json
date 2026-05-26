@@ -1,0 +1,70 @@
+{
+  "clinics": [
+    {
+      "id": "clinic-sevilla",
+      "name": "Clínica Nazarena Sevilla",
+      "address": "Av. de la Libertad, 42, Dos Hermanas, Sevilla"
+    },
+    {
+      "id": "clinic-triana",
+      "name": "Clínica Médica Triana",
+      "address": "Calle Betis, 18, Triana, Sevilla"
+    }
+  ],
+  "specialties": [
+    {
+      "id": "spec-gen",
+      "name": "Medicina General",
+      "description": "Atención primaria integral y medicina preventiva."
+    },
+    {
+      "id": "spec-cardio",
+      "name": "Cardiología",
+      "description": "Prevención, diagnóstico y tratamiento de enfermedades cardiovasculares."
+    },
+    {
+      "id": "spec-ped",
+      "name": "Pediatría",
+      "description": "Cuidado médico especializado para bebés, niños y adolescentes."
+    },
+    {
+      "id": "spec-derma",
+      "name": "Dermatología",
+      "description": "Cuidado de la piel, cabello y uñas."
+    }
+  ],
+  "doctors": [
+    {
+      "id": "doc-alberto",
+      "name": "Dr. Alberto Pérez",
+      "specialtyId": "spec-cardio",
+      "clinicId": "clinic-sevilla",
+      "schedules": ["Lunes 09:00 - 14:00", "Miércoles 16:00 - 20:00"]
+    },
+    {
+      "id": "doc-maria",
+      "name": "Dra. María Gómez",
+      "specialtyId": "spec-gen",
+      "clinicId": "clinic-sevilla",
+      "schedules": ["Martes 10:00 - 15:00", "Jueves 10:00 - 15:00"]
+    },
+    {
+      "id": "doc-carlos",
+      "name": "Dr. Carlos Ruiz",
+      "specialtyId": "spec-ped",
+      "clinicId": "clinic-triana",
+      "schedules": ["Lunes 16:00 - 20:00", "Viernes 09:00 - 14:00"]
+    }
+  ],
+  "appointments": [
+    {
+      "id": "appt-seed-1",
+      "patientName": "Antonio Manuel",
+      "patientEmail": "antonio@ejemplo.com",
+      "clinicId": "clinic-sevilla",
+      "specialtyId": "spec-cardio",
+      "doctorId": "doc-alberto",
+      "dateTime": "2026-06-01T10:30:00Z"
+    }
+  ]
+}
