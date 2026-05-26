@@ -58,6 +58,16 @@ export async function POST(request: NextRequest) {
       dateTime
     });
 
+    // Disparar el workflow duradero de forma asíncrona
+    // Nota: importamos dinámicamente o al principio del archivo
+    const { start } = await import("workflow/api");
+    const { appointmentWorkflow } = await import("../../../workflows/appointment");
+    
+    // Ejecutamos en segundo plano (fire-and-forget) sin bloquear la respuesta de la API
+    start(appointmentWorkflow, [newAppt]).catch((err) => {
+      console.error("[API APPOINTMENTS] Error al iniciar el workflow:", err);
+    });
+
     return NextResponse.json({
       status: 'success',
       data: newAppt
@@ -82,18 +92,46 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const success = db.deleteAppointment(id);
-    if (success) {
-      return NextResponse.json({
-        status: 'success',
-        message: 'Cita cancelada correctamente.'
-      });
-    } else {
-      return NextResponse.json(
-        { status: 'error', message: 'No se encontró ninguna cita registrada con ese ID.' },
-        { status: 404 }
-      );
+    // cancelAppointment valida la regla de 1 hora y lanza errores tipados
+    let cancelledAppt;
+    try {
+      cancelledAppt = db.cancelAppointment(id);
+    } catch (err: any) {
+      const code = err?.code;
+      if (code === 'NOT_FOUND') {
+        return NextResponse.json(
+          { status: 'error', message: err.message },
+          { status: 404 }
+        );
+      }
+      if (code === 'TOO_LATE') {
+        return NextResponse.json(
+          { status: 'error', message: err.message, code: 'TOO_LATE' },
+          { status: 409 }
+        );
+      }
+      if (code === 'ALREADY_CANCELLED') {
+        return NextResponse.json(
+          { status: 'error', message: err.message, code: 'ALREADY_CANCELLED' },
+          { status: 409 }
+        );
+      }
+      throw err; // error inesperado → lo captura el catch externo
     }
+
+    // Disparar el workflow de cancelación en segundo plano (fire-and-forget)
+    const { start } = await import('workflow/api');
+    const { cancellationWorkflow } = await import('../../../workflows/cancellation');
+
+    start(cancellationWorkflow, [cancelledAppt]).catch((err) => {
+      console.error('[API APPOINTMENTS] Error al iniciar el workflow de cancelación:', err);
+    });
+
+    return NextResponse.json({
+      status: 'success',
+      message: 'Cita cancelada correctamente.',
+      data: cancelledAppt,
+    });
   } catch (error: any) {
     return NextResponse.json(
       { status: 'error', message: error?.message || 'Error al procesar la solicitud de cancelación.' },

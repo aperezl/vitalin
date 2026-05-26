@@ -37,6 +37,7 @@ interface Appointment {
   specialtyId: string;
   doctorId: string;
   dateTime: string;
+  status: 'scheduled' | 'confirmed' | 'cancelled';
 }
 
 // Genera un tono analógico de llamada telefónica programáticamente (Web Audio API)
@@ -249,6 +250,11 @@ export default function Home() {
   const [searchEmail, setSearchEmail] = useState('');
   const [patientAppointments, setPatientAppointments] = useState<Appointment[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  // Cancellation state
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelSuccess, setCancelSuccess] = useState<string | null>(null);
 
   // Admin Forms State
   const [newClinicName, setNewClinicName] = useState('');
@@ -844,6 +850,17 @@ export default function Home() {
                   </button>
                 </form>
 
+                {cancelError && (
+                  <div className="mt-3 p-3 bg-red-900/30 border border-red-700/50 rounded-xl text-xs text-red-300 flex items-center gap-2">
+                    <span>⚠️</span><span>{cancelError}</span>
+                  </div>
+                )}
+                {cancelSuccess && (
+                  <div className="mt-3 p-3 bg-emerald-900/30 border border-emerald-700/50 rounded-xl text-xs text-emerald-300 flex items-center gap-2">
+                    <span>✅</span><span>{cancelSuccess}</span>
+                  </div>
+                )}
+
                 {patientAppointments.length > 0 && (
                   <div className="mt-6 space-y-3 max-h-[40vh] overflow-y-auto pr-1">
                     {patientAppointments.map((appt) => {
@@ -856,17 +873,76 @@ export default function Home() {
                         hour: '2-digit',
                         minute: '2-digit'
                       });
+                      const isCancelled = appt.status === 'cancelled';
+                      const isCancelling = cancellingId === appt.id;
+                      const appointmentTime = new Date(appt.dateTime).getTime();
+                      const canCancel = !isCancelled && appointmentTime > Date.now() + 60 * 60 * 1000;
 
                       return (
-                        <div key={appt.id} className="p-3 bg-zinc-900/60 border border-zinc-800/50 rounded-xl text-xs flex justify-between items-start gap-2">
-                          <div className="space-y-1">
-                            <p className="font-semibold text-white">{doctor}</p>
-                            <p className="text-[10px] text-zinc-400">{specialty} • {clinic}</p>
-                            <span className="inline-block text-[10px] text-blue-400 font-medium">📅 {readableDate}</span>
+                        <div
+                          key={appt.id}
+                          className={`p-3 border rounded-xl text-xs flex flex-col gap-2 transition-opacity ${
+                            isCancelled
+                              ? 'bg-zinc-900/30 border-zinc-800/30 opacity-60'
+                              : 'bg-zinc-900/60 border-zinc-800/50'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="space-y-1 flex-1 min-w-0">
+                              <p className={`font-semibold ${isCancelled ? 'text-zinc-400 line-through' : 'text-white'}`}>{doctor}</p>
+                              <p className="text-[10px] text-zinc-400">{specialty} • {clinic}</p>
+                              <span className="inline-block text-[10px] text-blue-400 font-medium">📅 {readableDate}</span>
+                            </div>
+                            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                              {isCancelled ? (
+                                <span className="text-[9px] bg-red-900/40 text-red-400 border border-red-800/50 px-2 py-0.5 rounded-full font-semibold">
+                                  Cancelada
+                                </span>
+                              ) : (
+                                <span className="text-[9px] bg-emerald-900/30 text-emerald-400 border border-emerald-800/50 px-2 py-0.5 rounded-full font-semibold">
+                                  Activa
+                                </span>
+                              )}
+                              <span className="text-[9px] bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded font-mono">
+                                {appt.id}
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-[9px] bg-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-mono">
-                            {appt.id}
-                          </span>
+
+                          {canCancel && (
+                            <button
+                              id={`cancel-appt-${appt.id}`}
+                              onClick={async () => {
+                                setCancellingId(appt.id);
+                                setCancelError(null);
+                                setCancelSuccess(null);
+                                try {
+                                  const res = await fetch(`/api/patients/appointments?id=${appt.id}`, { method: 'DELETE' });
+                                  const json = await res.json();
+                                  if (!res.ok) {
+                                    setCancelError(json.message || 'Error al cancelar la cita.');
+                                  } else {
+                                    setCancelSuccess('Cita cancelada correctamente. Recibirás una confirmación por email.');
+                                    setPatientAppointments(prev =>
+                                      prev.map(a => a.id === appt.id ? { ...a, status: 'cancelled' } : a)
+                                    );
+                                  }
+                                } catch {
+                                  setCancelError('Error de red al intentar cancelar la cita.');
+                                } finally {
+                                  setCancellingId(null);
+                                }
+                              }}
+                              disabled={isCancelling}
+                              className="w-full py-1.5 bg-red-900/30 hover:bg-red-900/60 border border-red-800/50 hover:border-red-700 text-red-400 hover:text-red-300 text-[10px] font-semibold rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                            >
+                              {isCancelling ? (
+                                <><span className="w-3 h-3 border border-red-400/30 border-t-red-400 rounded-full animate-spin inline-block"></span> Cancelando...</>
+                              ) : (
+                                <>✕ Cancelar cita</>
+                              )}
+                            </button>
+                          )}
                         </div>
                       );
                     })}

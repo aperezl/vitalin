@@ -29,6 +29,7 @@ export interface Appointment {
   specialtyId: string;
   doctorId: string;
   dateTime: string; // ISO 8601
+  status: 'scheduled' | 'confirmed' | 'cancelled';
 }
 
 class MemoryDatabase {
@@ -113,18 +114,59 @@ class MemoryDatabase {
     return this.appointments;
   }
 
-  addAppointment(appt: Omit<Appointment, 'id'>): Appointment {
+  addAppointment(appt: Omit<Appointment, 'id' | 'status'>): Appointment {
     const newAppt = {
       ...appt,
-      id: 'appt-' + Math.random().toString(36).substring(2, 9)
+      id: 'appt-' + Math.random().toString(36).substring(2, 9),
+      status: 'scheduled' as const,
     };
     this.appointments.push(newAppt);
     return newAppt;
   }
 
+  findAppointmentById(id: string): Appointment | null {
+    return this.appointments.find(a => a.id === id) ?? null;
+  }
+
   findAppointmentsByEmail(email: string): Appointment[] {
     const searchEmail = email.toLowerCase().trim();
     return this.appointments.filter(a => a.patientEmail.toLowerCase().trim() === searchEmail);
+  }
+
+  /**
+   * Marca la cita como cancelada. Aplica la regla de negocio: sólo se puede
+   * cancelar si faltan más de 60 minutos para la cita.
+   * Lanza un error con `code: 'TOO_LATE'` si se intenta cancelar dentro de la
+   * última hora, o `code: 'NOT_FOUND'` si la cita no existe.
+   */
+  cancelAppointment(id: string): Appointment {
+    const appt = this.findAppointmentById(id);
+    if (!appt) {
+      const err = new Error(`No se encontró ninguna cita con id "${id}".`);
+      (err as any).code = 'NOT_FOUND';
+      throw err;
+    }
+    if (appt.status === 'cancelled') {
+      const err = new Error(`La cita "${id}" ya está cancelada.`);
+      (err as any).code = 'ALREADY_CANCELLED';
+      throw err;
+    }
+    const appointmentTime = new Date(appt.dateTime).getTime();
+    const oneHourFromNow = Date.now() + 60 * 60 * 1000;
+    if (appointmentTime <= oneHourFromNow) {
+      const err = new Error('No puedes cancelar una cita con menos de 1 hora de antelación.');
+      (err as any).code = 'TOO_LATE';
+      throw err;
+    }
+    appt.status = 'cancelled';
+    return appt;
+  }
+
+  updateAppointmentStatus(id: string, status: Appointment['status']): Appointment | null {
+    const appt = this.findAppointmentById(id);
+    if (!appt) return null;
+    appt.status = status;
+    return appt;
   }
 
   deleteAppointment(id: string): boolean {
@@ -138,7 +180,7 @@ class MemoryDatabase {
 const globalForDb = global as unknown as { db: MemoryDatabase };
 
 // Salvaguarda para recargar la instancia si se añaden métodos nuevos en caliente
-if (globalForDb.db && typeof globalForDb.db.deleteAppointment !== 'function') {
+if (globalForDb.db && typeof globalForDb.db.cancelAppointment !== 'function') {
   globalForDb.db = new MemoryDatabase();
 }
 
