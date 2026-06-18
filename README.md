@@ -124,3 +124,25 @@ npm run agent:dev
 ```
 
 Una vez que ambos servicios estén en funcionamiento, abre el navegador, conéctate a la sesión en la interfaz web y comienza a conversar con **Vitalin** para agendar tu cita médica.
+
+---
+
+## 📸 Capturas de Pantalla
+
+A continuación se muestran algunas capturas de la interfaz y las distintas vistas de la aplicación:
+
+### 1. Portal del Paciente (Inicio)
+![Portal del Paciente](public/screenshots/home.png)
+
+### 2. Conversación Activa con el Agente de Voz (Vitalin)
+![Asistente de Voz Activo](public/screenshots/voice_connected.png)
+
+### 3. Buscador y Listado de Médicos
+![Buscador de Médicos](public/screenshots/medicos.png)
+
+### 4. Consulta de Horarios y Disponibilidad de Especialistas
+![Disponibilidad y Horarios](public/screenshots/agenda.png)
+
+### 5. Panel de Administración y Configuración
+![Panel de Administración](public/screenshots/admin.png)
+
