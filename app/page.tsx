@@ -200,8 +200,9 @@ function generateSlotsForDoctor(doctor: Doctor, appointments: Appointment[]): Do
         const slotDate = new Date(targetDate);
         slotDate.setHours(currentHour, startMin, 0, 0);
         
-        // Comprobar si hay alguna cita coincidente
+        // Comprobar si hay alguna cita coincidente y no cancelada
         const matchingAppt = appointments.find(appt => {
+          if (appt.status === 'cancelled') return false;
           const apptDate = new Date(appt.dateTime);
           return (
             apptDate.getDate() === slotDate.getDate() &&
